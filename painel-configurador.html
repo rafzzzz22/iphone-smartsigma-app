@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Sigma — Configurador Xcode + GitHub Actions (iPhone .IPA)</title>
+  <style>
+    :root {
+      --bg-base: #0a0a0c;
+      --bg-surface: #121318;
+      --bg-elevated: #1a1c23;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-gold: rgba(217, 173, 82, 0.38);
+      --gold: #d9ad52;
+      --gold-hover: #e5be6b;
+      --text-primary: #f4f4f6;
+      --text-secondary: #9ca3af;
+      --green: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 32px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: rgba(217, 173, 82, 0.14);
+      border: 1px solid var(--border-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #86efac;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 920px) {
+      .grid-main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input, select {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 11px 14px;
+      color: var(--text-primary);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 150ms ease-out;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--gold);
+    }
+
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      padding: 16px;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--gold);
+      color: #000;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .step-content h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    code {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      color: var(--gold);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .btn {
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: transform 150ms ease-out, opacity 150ms ease-out;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--gold);
+      color: #09090b;
+    }
+
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      border-color: var(--border-subtle);
+    }
+
+    /* iPhone Mockup Preview */
+    .iphone-frame {
+      width: 340px;
+      height: 670px;
+      background: #0c0c0e;
+      border-radius: 46px;
+      border: 8px solid #26272e;
+      padding: 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 0 auto;
+    }
+
+    .dynamic-island {
+      width: 104px;
+      height: 26px;
+      background: #000;
+      border-radius: 999px;
+      margin: 0 auto 16px auto;
+    }
+
+    .iphone-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+    }
+
+    .mock-header {
+      background: #17181f;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mock-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(217, 173, 82, 0.18);
+      border: 1px solid var(--border-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .mock-cta {
+      background: var(--gold);
+      color: #000;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mock-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mock-tile {
+      background: #16171d;
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 12px;
+      cursor: pointer;
+      transition: transform 150ms ease-out;
+    }
+
+    .mock-tile.active {
+      border-color: var(--border-gold);
+      background: #1d1e26;
+    }
+
+    .mock-tile-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .mock-tile-sub {
+      font-size: 10px;
+      color: var(--text-secondary);
+    }
+
+    .mock-tabbar {
+      display: flex;
+      justify-content: space-around;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .mock-tabbar span.active {
+      color: var(--gold);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="brand-badge"></div>
+        <div>
+          <h1>Projeto Xcode + GitHub Actions (iPhone .IPA)</h1>
+          <p class="subtitle">Compilação na nuvem macOS gratuita do GitHub para instalar apps no iPhone usando Windows</p>
+        </div>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        Pronto para Compilar (.xcodeproj + GitHub Workflow)
+      </div>
+    </header>
+
+    <div class="grid-main">
+      <div>
+        <div class="card">
+          <div class="card-title">1. Personalizar Parâmetros do App iOS</div>
+          <p class="card-desc">Ajuste o nome, Bundle ID ou URL do sistema web. Você também pode informar esses valores direto no botão "Run workflow" do GitHub Actions.</p>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="appName">Nome do App no iPhone</label>
+              <input id="appName" type="text" value="Smart Sigma" oninput="updatePreview()" />
+            </div>
+            <div class="form-group">
+              <label for="bundleId">Bundle Identifier (Xcode)</label>
+              <input id="bundleId" type="text" value="com.smartsigma.iosapp" oninput="updatePreview()" />
+            </div>
+            <div class="form-group full">
+              <label for="webUrl">URL do Sistema Web / Home Assistant (Opcional)</label>
+              <input id="webUrl" type="url" value="https://demo.home-assistant.io" oninput="updatePreview()" />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="copyWorkflowCommand()">Copiar Comando GitHub CLI (gh)</button>
+            <button class="btn btn-secondary" onclick="downloadCustomAppConfig()">Baixar AppConfig.swift Customizado</button>
+          </div>
+          <p id="copyFeedback" style="font-size: 12px; color: #86efac; margin-top: 10px; display: none;"></p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">2. Como Gerar e Baixar o App no seu iPhone (Passo a Passo)</div>
+          <p class="card-desc">Como o Windows não roda o Xcode localmente, o GitHub Actions aluga um Mac gratuitamente na nuvem e gera o arquivo <code>SmartSigmaApp.ipa</code> para você.</p>
+
+          <div class="steps-list">
+            <div class="step-item">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3>Suba esta pasta para o seu GitHub</h3>
+                <p>Execute o arquivo <code>PUBLICAR_NO_GITHUB.bat</code> na pasta do projeto ou suba os arquivos para um repositório no seu GitHub.</p>
+              </div>
+            </div>
+
+            <div class="step-item">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3>Aguarde 2 minutos na aba "Actions" ou "Releases"</h3>
+                <p>O workflow <code>.github/workflows/build-ipa.yml</code> roda um servidor <code>macos-latest</code> com Xcode, compila o projeto SwiftUI e publica o arquivo <code>SmartSigmaApp.ipa</code> automaticamente na aba <strong>Releases</strong> do seu GitHub.</p>
+              </div>
+            </div>
+
+            <div class="step-item">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3>Instale o <code>.ipa</code> no iPhone (Sideloadly / AltStore / SideStore)</h3>
+                <p>No Windows, abra o <strong>Sideloadly</strong> (gratuito em <code>sideloadly.io</code>), conecte o iPhone no USB, arraste o <code>SmartSigmaApp.ipa</code> baixado do GitHub, coloque seu Apple ID e clique em <strong>Start</strong>. No iPhone, vá em <em>Ajustes → Geral → Gestão de VPN e Dispositivo</em> e confie no app!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview do App no iPhone -->
+      <div>
+        <div class="iphone-frame">
+          <div>
+            <div class="dynamic-island"></div>
+            <div class="iphone-screen">
+              <div class="mock-header">
+                <div class="mock-icon" id="previewIcon">SS</div>
+                <div>
+                  <div style="font-weight: 700; font-size: 16px;" id="previewTitle">Smart Sigma</div>
+                  <div style="font-size: 11px; color: var(--text-secondary);" id="previewBundle">com.smartsigma.iosapp</div>
+                </div>
+              </div>
+
+              <div class="mock-cta">
+                <div>Abrir Sistema Web em Tela Cheia →</div>
+                <div style="font-size: 10px; font-weight: 500; opacity: 0.8; margin-top: 2px;" id="previewUrl">https://demo.home-assistant.io</div>
+              </div>
+
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.08em; margin-top: 4px;">
+                CONTROLES RÁPIDOS (SWIFTUI NATIVO)
+              </div>
+
+              <div class="mock-grid">
+                <div class="mock-tile active" onclick="this.classList.toggle('active')">
+                  <div style="color: var(--gold); font-size: 16px;">🎬</div>
+                  <div class="mock-tile-title">Cenário Cinema</div>
+                  <div class="mock-tile-sub">Luzes 15% • TV</div>
+                </div>
+                <div class="mock-tile active" onclick="this.classList.toggle('active')">
+                  <div style="color: var(--gold); font-size: 16px;">❄️</div>
+                  <div class="mock-tile-title">Climatização</div>
+                  <div class="mock-tile-sub">Ar Sala 22°C</div>
+                </div>
+                <div class="mock-tile" onclick="this.classList.toggle('active')">
+                  <div style="color: var(--gold); font-size: 16px;">💡</div>
+                  <div class="mock-tile-title">Iluminação</div>
+                  <div class="mock-tile-sub">Recepção & Estar</div>
+                </div>
+                <div class="mock-tile active" onclick="this.classList.toggle('active')">
+                  <div style="color: var(--gold); font-size: 16px;">🛡️</div>
+                  <div class="mock-tile-title">Segurança</div>
+                  <div class="mock-tile-sub">Sensores Ativos</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mock-tabbar">
+            <span class="active">Painel</span>
+            <span>Web App</span>
+            <span>Ajustes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updatePreview() {
+      const name = document.getElementById('appName').value.trim() || 'Smart Sigma';
+      const bundle = document.getElementById('bundleId').value.trim() || 'com.smartsigma.iosapp';
+      const url = document.getElementById('webUrl').value.trim() || 'https://demo.home-assistant.io';
+
+      document.getElementById('previewTitle').textContent = name;
+      document.getElementById('previewBundle').textContent = bundle;
+      document.getElementById('previewUrl').textContent = url;
+      document.getElementById('previewIcon').textContent = name.substring(0, 2).toUpperCase();
+    }
+
+    function copyWorkflowCommand() {
+      const name = document.getElementById('appName').value.trim() || 'Smart Sigma';
+      const bundle = document.getElementById('bundleId').value.trim() || 'com.smartsigma.iosapp';
+      const url = document.getElementById('webUrl').value.trim() || '';
+      const cmd = `gh workflow run build-ipa.yml -f app_name="${name}" -f bundle_id="${bundle}" -f webview_url="${url}"`;
+      navigator.clipboard.writeText(cmd);
+      const fb = document.getElementById('copyFeedback');
+      fb.textContent = 'Comando copiado: ' + cmd;
+      fb.style.display = 'block';
+    }
+
+    function downloadCustomAppConfig() {
+      const name = document.getElementById('appName').value.trim() || 'Smart Sigma';
+      const url = document.getElementById('webUrl').value.trim() || 'https://demo.home-assistant.io';
+      const content = `import Foundation\n\nstruct AppConfig {\n    static let appTitle: String = "${name}"\n    static let appSubtitle: String = "iOS Native & Web Controller"\n    static let startInWebViewMode: Bool = false\n    static let defaultWebURL: String = "${url}"\n}\n`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'AppConfig.swift';
+      a.click();
+    }
+  </script>
+</body>
+</html>
