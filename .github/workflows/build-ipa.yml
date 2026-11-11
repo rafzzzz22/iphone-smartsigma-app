@@ -1,0 +1,103 @@
+name: Build iOS IPA (Xcode Cloud via GitHub Actions)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Nome do App no iPhone'
+        required: false
+        default: 'SmartSigma'
+      bundle_id:
+        description: 'Bundle Identifier (ex: com.smartsigma.iosapp)'
+        required: false
+        default: 'com.smartsigma.iosapp'
+      webview_url:
+        description: 'URL opcional se quiser abrir sistema Web/Home Assistant direto (deixe vazio para App Nativo)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    name: Compilar App iOS no Xcode (macOS Runner)
+    runs-on: macos-latest
+
+    steps:
+      - name: 1. Baixar Código do Repositório
+        uses: actions/checkout@v4
+
+      - name: 2. Selecionar Xcode Estável
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: 3. Aplicar Customizações do Workflow (Opcional)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -n "${{ github.event.inputs.bundle_id }}" ]; then
+            sed -i '' "s|com.smartsigma.iosapp|${{ github.event.inputs.bundle_id }}|g" project.yml
+          fi
+          if [ -n "${{ github.event.inputs.app_name }}" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName '${{ github.event.inputs.app_name }}'" Sources/Info.plist
+            /usr/libexec/PlistBuddy -c "Set :CFBundleName '${{ github.event.inputs.app_name }}'" Sources/Info.plist
+          fi
+          if [ -n "${{ github.event.inputs.webview_url }}" ]; then
+            sed -i '' "s|https://demo.home-assistant.io|${{ github.event.inputs.webview_url }}|g" Sources/AppConfig.swift
+            sed -i '' "s|static let startInWebViewMode: Bool = false|static let startInWebViewMode: Bool = true|g" Sources/AppConfig.swift
+          fi
+
+      - name: 4. Gerar Projeto Xcode (.xcodeproj) via XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: 5. Compilar App iOS (Unsigned Release Build)
+        run: |
+          xcodebuild clean build \
+            -project SmartSigmaApp.xcodeproj \
+            -scheme SmartSigmaApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build_output \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: 6. Empacotar Arquivo .IPA para Instalação no iPhone
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find build_output/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          echo "App compilado encontrado em: $APP_PATH"
+          cp -r "$APP_PATH" Payload/
+          zip -r9 SmartSigmaApp.ipa Payload
+          ls -lh SmartSigmaApp.ipa
+
+      - name: 7. Disponibilizar .IPA para Download nos Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartSigmaApp-iPhone-IPA
+          path: SmartSigmaApp.ipa
+          retention-days: 90
+
+      - name: 8. Criar Release Automática com Link Direto do .IPA
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "📱 Versão iPhone #${{ github.run_number }} (IPA Pronto)"
+          body: |
+            ### 📲 Como instalar no seu iPhone (Sem precisar de Mac):
+            1. Baixe o arquivo **`SmartSigmaApp.ipa`** anexado abaixo em **Assets**.
+            2. Instale no iPhone usando um dos métodos gratuitos:
+               - **Sideloadly** (no Windows/PC via cabo ou Wi-Fi): Abra o Sideloadly, arraste o `SmartSigmaApp.ipa`, coloque seu Apple ID gratuito e clique em **Start**.
+               - **AltStore / SideStore** (direto no iPhone): Abra o arquivo `.ipa` no AltStore/SideStore do iPhone.
+               - **ESign / Feather / TrollStore / Scarlet**: Importe o `.ipa` direto pelo Safari no iPhone e clique em Instalar.
+            3. Na primeira vez usando conta gratuita, vá no iPhone em **Ajustes > Geral > Gestão de VPN e Dispositivo** e confie no seu perfil de desenvolvedor.
+          files: SmartSigmaApp.ipa
+          prerelease: false
